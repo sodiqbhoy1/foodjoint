@@ -1,6 +1,7 @@
 "use client";
 import { useState } from 'react';
 import Link from 'next/link';
+import FoodJointLogoSimple from './FoodJointLogoSimple';
 
 export default function Navbar() {
     const [open, setOpen] = useState(false);
@@ -8,13 +9,16 @@ export default function Navbar() {
     return (
         <header style={{ backgroundColor: 'var(--brand)', color: 'var(--background)' }}>
             <nav className="max-w-6xl mx-auto flex items-center justify-between py-4 px-6">
-                {/* Logo on the left */}
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center" aria-hidden>
-                        <span className="font-bold text-white">FJ</span>
+                {/* Logo on the left with home link */}
+                <Link href="/" className="flex items-center gap-3 hover:opacity-90 transition-all duration-300 group no-underline">
+                    <div className="transform transition-transform group-hover:scale-110 group-hover:rotate-2">
+                        <FoodJointLogoSimple size={48} className="drop-shadow-md" />
                     </div>
-                    <span className="font-semibold text-white">FoodJoint</span>
-                </div>
+                    <div className="flex flex-col">
+                        <span className="font-bold text-white text-lg leading-tight group-hover:text-yellow-100 transition-colors">FoodJoint</span>
+                        <span className="text-white/80 text-xs leading-tight group-hover:text-white transition-colors">Fresh &amp; Fast</span>
+                    </div>
+                </Link>
 
                 {/* Links on the right (desktop) */}
                 <ul className="hidden md:flex items-center gap-6 list-none m-0 p-0">
@@ -23,6 +27,9 @@ export default function Navbar() {
                     </li>
                     <li className="hover:underline cursor-pointer">
                         <Link href="/menu">Menu</Link>
+                    </li>
+                    <li className="hover:underline cursor-pointer">
+                        <Link href="/track-order">Track Order</Link>
                     </li>
                     <li className="hover:underline cursor-pointer">
                         <Link href="/about">About</Link>
@@ -42,16 +49,43 @@ export default function Navbar() {
 
             {/* Mobile menu panel */}
             {open && (
-                <div className="md:hidden bg-[var(--brand)]/95 text-white">
+                <div className="md:hidden bg-[var(--brand)]/95 backdrop-blur-sm text-white border-t border-white/20">
                     <ul className="flex flex-col p-4 gap-3">
                         <li>
-                            <Link href="/" onClick={() => setOpen(false)}>Home</Link>
+                            <Link 
+                                href="/" 
+                                onClick={() => setOpen(false)}
+                                className="block py-2 px-3 hover:bg-white/10 rounded transition-colors"
+                            >
+                                Home
+                            </Link>
                         </li>
                         <li>
-                            <Link href="/menu" onClick={() => setOpen(false)}>Menu</Link>
+                            <Link 
+                                href="/menu" 
+                                onClick={() => setOpen(false)}
+                                className="block py-2 px-3 hover:bg-white/10 rounded transition-colors"
+                            >
+                                Menu
+                            </Link>
                         </li>
                         <li>
-                            <Link href="/about" onClick={() => setOpen(false)}>About</Link>
+                            <Link 
+                                href="/track-order" 
+                                onClick={() => setOpen(false)}
+                                className="block py-2 px-3 hover:bg-white/10 rounded transition-colors"
+                            >
+                                Track Order
+                            </Link>
+                        </li>
+                        <li>
+                            <Link 
+                                href="/about" 
+                                onClick={() => setOpen(false)}
+                                className="block py-2 px-3 hover:bg-white/10 rounded transition-colors"
+                            >
+                                About
+                            </Link>
                         </li>
                     </ul>
                 </div>

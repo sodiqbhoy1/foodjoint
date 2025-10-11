@@ -1,12 +1,14 @@
 "use client";
 import { useState } from 'react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { FiShoppingCart, FiX, FiTrash } from 'react-icons/fi';
 import { useCart } from '@/context/cart';
 
 export default function CartPanel() {
   const { items, update, remove, clear } = useCart();
   const [open, setOpen] = useState(false);
+  const router = useRouter();
 
   const total = items.reduce((s, it) => s + (Number(String(it.price).replace(/[^0-9.-]+/g, '')) || 0) * it.qty, 0);
 
@@ -93,7 +95,7 @@ export default function CartPanel() {
                               <button onClick={() => update(it.key, it.qty + 1)} className="px-3 py-1 bg-[var(--brand)] text-white">+</button>
                             </div>
 
-                            <div className="ml-auto text-sm font-medium text-[var(--foreground)]">${(priceNum * it.qty).toFixed(2)}</div>
+                            <div className="ml-auto text-sm font-medium text-[var(--foreground)]">#{(priceNum * it.qty).toFixed(2)}</div>
                           </div>
                         </div>
                       </div>
@@ -106,11 +108,11 @@ export default function CartPanel() {
                 <div className="p-4 border-t bg-white sticky bottom-0">
                   <div className="flex items-center justify-between mb-3">
                     <div className="text-sm text-gray-600">Subtotal</div>
-                    <div className="text-lg font-semibold">${total.toFixed(2)}</div>
+                    <div className="text-lg font-semibold">#{total.toFixed(2)}</div>
                   </div>
 
                   <div className="space-y-2">
-                    <button onClick={() => { console.log('checkout', items); }} className="w-full inline-flex items-center justify-center gap-2 bg-[var(--brand)] text-white px-4 py-3 rounded-md shadow">
+                    <button onClick={() => { setOpen(false); router.push('/checkout'); }} className="w-full inline-flex items-center justify-center gap-2 bg-[var(--brand)] text-white px-4 py-3 rounded-md shadow">
                       Checkout
                     </button>
 

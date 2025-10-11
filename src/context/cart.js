@@ -1,5 +1,6 @@
 "use client";
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useNotification } from './notification';
 
 const CartContext = createContext(null);
 
@@ -9,6 +10,8 @@ export function useCart() {
 
 export function CartProvider({ children }) {
   const [items, setItems] = useState([]);
+  const notification = useNotification();
+  const showCartNotification = notification?.showCartNotification;
 
   // Load cart from localStorage on mount
   useEffect(() => {
@@ -31,18 +34,32 @@ export function CartProvider({ children }) {
       console.warn('Failed to save cart to localStorage', e);
     }
   }, [items]);
+
   const add = (product, qty = 1) => {
+    // Update cart items
     setItems((prev) => {
       const idx = prev.findIndex((p) => p.key === product.key);
-      if (idx === -1) return [...prev, { ...product, qty }];
-      const copy = [...prev];
-      copy[idx] = { ...copy[idx], qty: copy[idx].qty + qty };
-      return copy;
+      const isNewItem = idx === -1;
+      
+      if (isNewItem) {
+        return [...prev, { ...product, qty }];
+      } else {
+        const copy = [...prev];
+        copy[idx] = { ...copy[idx], qty: copy[idx].qty + qty };
+        return copy;
+      }
     });
+
+    // Show notification (only once, outside of setState)
+    if (showCartNotification) {
+      showCartNotification(product.title || product.name, qty);
+    }
   };
+
   const update = (key, qty) => {
     setItems((prev) => prev.map((p) => (p.key === key ? { ...p, qty } : p)));
   };
+  
   const remove = (key) => setItems((prev) => prev.filter((p) => p.key !== key));
   const clear = () => setItems([]);
 
