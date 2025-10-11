@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { FiPlus, FiEdit2, FiTrash, FiImage, FiCheckCircle, FiXCircle, FiLoader } from 'react-icons/fi';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import AdminLayout from '@/components/admin/AdminLayout';
@@ -43,14 +44,11 @@ export default function AdminMenuPage(){
       
       if (data.ok) {
         setForm(f => ({ ...f, image: data.url, imageUploading: false }));
-        console.log('✅ Image uploaded successfully:', data.url);
       } else {
-        console.error('❌ Upload failed:', data.error);
         alert('Failed to upload image: ' + (data.error || 'Unknown error'));
         setForm(f => ({ ...f, imageUploading: false }));
       }
     } catch (error) {
-      console.error('❌ Upload error:', error);
       alert('Failed to upload image: ' + error.message);
       setForm(f => ({ ...f, imageUploading: false }));
     }
@@ -156,7 +154,14 @@ export default function AdminMenuPage(){
                       <a href={form.image} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-[var(--brand)] text-sm hover:underline">
                         <FiImage />Preview
                       </a>
-                      <img src={form.image} alt="Preview" className="w-12 h-12 object-cover rounded border" />
+                      <Image
+                        src={form.image}
+                        alt="Preview"
+                        width={48}
+                        height={48}
+                        unoptimized
+                        className="w-12 h-12 object-cover rounded border"
+                      />
                       <button 
                         type="button"
                         onClick={() => setForm(f => ({ ...f, image: '' }))}
@@ -203,7 +208,14 @@ export default function AdminMenuPage(){
                   <tr key={it._id || it.id} className="border-b">
                     <td className="p-2">
                       {it.image ? (
-                        <img src={it.image} alt={it.name} className="w-12 h-12 object-cover rounded" />
+                        <Image
+                          src={it.image}
+                          alt={it.name}
+                          width={48}
+                          height={48}
+                          unoptimized
+                          className="w-12 h-12 object-cover rounded"
+                        />
                       ) : (
                         <div className="w-12 h-12 bg-gray-100 rounded flex items-center justify-center">N/A</div>
                       )}
