@@ -28,31 +28,35 @@ function ResetPasswordForm() {
     }
 
     // Validate token on component mount
+    const validateToken = async () => {
+      try {
+        const response = await fetch('/api/admin/password-reset', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'validate',
+            token
+          })
+        });
+
+        const data = await response.json();
+        if (data.ok) {
+          setValidToken(true);
+        } else {
+          setError(data.error || 'Invalid or expired reset link');
+        }
+      } catch (err) {
+        setError('Network error. Please try again.');
+      } finally {
+        setValidatingToken(false);
+      }
+    };
+
     validateToken();
-  }, [token, validateToken]);
+  }, [token]);
 
   const validateToken = useCallback(async () => {
-    try {
-      const response = await fetch('/api/admin/password-reset', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'validate',
-          token
-        })
-      });
-
-      const data = await response.json();
-      if (data.ok) {
-        setValidToken(true);
-      } else {
-        setError(data.error || 'Invalid or expired reset link');
-      }
-    } catch (err) {
-      setError('Network error. Please try again.');
-    } finally {
-      setValidatingToken(false);
-    }
+    // This function is no longer needed since we moved the logic to useEffect
   }, [token]);
 
   const handleSubmit = async (e) => {

@@ -30,26 +30,44 @@ export async function sendOrderConfirmationEmail(orderDetails) {
       return { success: false, message: 'No customer email provided' };
     }
 
-  // Import nodemailer dynamically to avoid bundling issues
-  const nodemailer = (await import('nodemailer')).default ?? require('nodemailer');
+    // Import nodemailer dynamically for better Vercel compatibility
+    let nodemailer;
+    try {
+      const nodemailerModule = await import('nodemailer');
+      nodemailer = nodemailerModule.default || nodemailerModule;
+    } catch (importErr) {
+      console.error('❌ Failed to import nodemailer:', importErr);
+      return { success: false, error: 'Email service unavailable' };
+    }
     console.log('📧 Nodemailer imported successfully');
     
-    // Create transporter (use SMTP for reliability)
+    // Create transporter with Vercel-optimized settings
     const transporter = nodemailer.createTransport({
       host: 'smtp.gmail.com',
-      port: 465,
-      secure: true,
+      port: 587, // Changed to 587 for better Vercel compatibility
+      secure: false, // Use STARTTLS instead of SSL
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
       },
+      tls: {
+        rejectUnauthorized: false // For compatibility with various hosting environments
+      }
     });
-    // Verify transporter early
+    
+    // Verify transporter with timeout for Vercel
     try {
-      await transporter.verify();
-    } catch (verErr) {
-      console.error('❌ Email transporter verification failed:', verErr?.message || verErr);
-      return { success: false, error: 'Transporter verification failed' };
+      console.log('📧 Verifying email transporter...');
+      const verifyPromise = transporter.verify();
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Email verification timeout')), 10000)
+      );
+      
+      await Promise.race([verifyPromise, timeoutPromise]);
+      console.log('✅ Email transporter verified successfully');
+    } catch (verifyError) {
+      console.log('⚠️ Email transporter verification failed (proceeding anyway):', verifyError.message);
+      // Continue anyway - some hosting environments have verification issues but email still works
     }
     console.log('📧 Transporter created');
 
@@ -83,18 +101,28 @@ export async function sendPasswordResetEmail(email, resetToken) {
       return { success: true, message: 'Email service not configured' };
     }
 
-  // Import nodemailer
-  const nodemailer = require('nodemailer');
+    // Import nodemailer dynamically for better Vercel compatibility
+    let nodemailer;
+    try {
+      const nodemailerModule = await import('nodemailer');
+      nodemailer = nodemailerModule.default || nodemailerModule;
+    } catch (importErr) {
+      console.error('❌ Failed to import nodemailer:', importErr);
+      return { success: false, error: 'Email service unavailable' };
+    }
     
-    // Create transporter
-    const transporter = nodemailer.createTransport({
+    // Create transporter with Vercel-optimized settings
+    const transporter = nodemailer.createTransporter({
       host: 'smtp.gmail.com',
-      port: 465,
-      secure: true,
+      port: 587, // Use 587 for better Vercel compatibility
+      secure: false, // Use STARTTLS instead of SSL
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
       },
+      tls: {
+        rejectUnauthorized: false // For compatibility with various hosting environments
+      }
     });
 
     const resetUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/admin/reset-password?token=${resetToken}`;

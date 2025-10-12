@@ -64,19 +64,34 @@ export async function POST(req) {
       
       // Send order confirmation email (non-blocking) and mark flag
       if (order.customer?.email) {
+        console.log('📧 Attempting to send webhook order confirmation email to:', order.customer.email);
         sendOrderConfirmationEmail(order)
           .then(async (result) => {
+            console.log('📧 Webhook email result:', result);
             if (result?.success) {
               await db.collection('orders').updateOne(
                 { _id: order._id },
                 { $set: { confirmationEmailSent: true, confirmationEmailSentAt: new Date() } }
               );
+              console.log('✅ Webhook email flag updated for order:', order.reference);
+            } else {
+              console.log('❌ Webhook email failed but order saved:', result);
+              await db.collection('orders').updateOne(
+                { _id: order._id },
+                { $set: { confirmationEmailError: result?.error || 'Unknown error', confirmationEmailSentAt: new Date() } }
+              );
             }
           })
           .catch(err => {
-            console.error('Failed to send order confirmation email via webhook:', err);
-            // Don't fail the webhook if email fails
+            console.error('❌ Failed to send order confirmation email via webhook:', err);
+            // Update order with email error for debugging
+            db.collection('orders').updateOne(
+              { _id: order._id },
+              { $set: { confirmationEmailError: err.message, confirmationEmailSentAt: new Date() } }
+            ).catch(dbErr => console.error('Failed to update email error:', dbErr));
           });
+      } else {
+        console.log('⚠️ No customer email found in webhook order, skipping email');
       }
       
       console.log('✅ Order created via webhook:', order.reference);
