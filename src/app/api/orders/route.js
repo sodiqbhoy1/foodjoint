@@ -3,6 +3,8 @@ import { getDb } from '@/lib/mongodb';
 import { ObjectId } from 'mongodb';
 import { sendOrderConfirmationEmail } from '@/lib/emailService';
 
+export const runtime = 'nodejs';
+
 export async function GET(req) {
   try {
     const { searchParams } = new URL(req.url);
@@ -34,6 +36,19 @@ export async function POST(req) {
       });
       
       if (existingOrder) {
+        // If confirmation email not yet sent and email is available, send it now
+        if (!existingOrder.confirmationEmailSent && existingOrder.customer?.email) {
+          sendOrderConfirmationEmail(existingOrder)
+            .then(async (result) => {
+              if (result?.success) {
+                await db.collection('orders').updateOne(
+                  { _id: existingOrder._id },
+                  { $set: { confirmationEmailSent: true, confirmationEmailSentAt: new Date() } }
+                );
+              }
+            })
+            .catch(() => { /* silent */ });
+        }
         return NextResponse.json({ ok: true, order: existingOrder, message: 'Order already exists' });
       }
     }
@@ -58,11 +73,18 @@ export async function POST(req) {
       amount: order.amount
     });
     
-    // Send order confirmation email (non-blocking)
+    // Send order confirmation email (non-blocking) and mark flag
     if (order.customer?.email) {
-      sendOrderConfirmationEmail(order).catch(err => {
-        // Log silently on server
-      });
+      sendOrderConfirmationEmail(order)
+        .then(async (result) => {
+          if (result?.success) {
+            await db.collection('orders').updateOne(
+              { _id: order._id },
+              { $set: { confirmationEmailSent: true, confirmationEmailSentAt: new Date() } }
+            );
+          }
+        })
+        .catch(() => { /* silent */ });
     }
     
     return NextResponse.json({ ok: true, order });

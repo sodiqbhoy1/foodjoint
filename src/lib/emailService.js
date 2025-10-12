@@ -30,8 +30,8 @@ export async function sendOrderConfirmationEmail(orderDetails) {
       return { success: false, message: 'No customer email provided' };
     }
 
-  // Import nodemailer
-  const nodemailer = require('nodemailer');
+  // Import nodemailer dynamically to avoid bundling issues
+  const nodemailer = (await import('nodemailer')).default ?? require('nodemailer');
     console.log('📧 Nodemailer imported successfully');
     
     // Create transporter (use SMTP for reliability)
@@ -44,6 +44,13 @@ export async function sendOrderConfirmationEmail(orderDetails) {
         pass: process.env.EMAIL_PASS,
       },
     });
+    // Verify transporter early
+    try {
+      await transporter.verify();
+    } catch (verErr) {
+      console.error('❌ Email transporter verification failed:', verErr?.message || verErr);
+      return { success: false, error: 'Transporter verification failed' };
+    }
     console.log('📧 Transporter created');
 
     // Email content

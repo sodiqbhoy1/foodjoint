@@ -3,6 +3,8 @@ import { getDb } from '@/lib/mongodb';
 import crypto from 'crypto';
 import { sendOrderConfirmationEmail } from '@/lib/emailService';
 
+export const runtime = 'nodejs';
+
 export async function POST(req) {
   try {
     // Get the raw body for signature verification
@@ -60,12 +62,21 @@ export async function POST(req) {
       const result = await db.collection('orders').insertOne(order);
       order._id = result.insertedId;
       
-      // Send order confirmation email (non-blocking)
+      // Send order confirmation email (non-blocking) and mark flag
       if (order.customer?.email) {
-        sendOrderConfirmationEmail(order).catch(err => {
-          console.error('Failed to send order confirmation email via webhook:', err);
-          // Don't fail the webhook if email fails
-        });
+        sendOrderConfirmationEmail(order)
+          .then(async (result) => {
+            if (result?.success) {
+              await db.collection('orders').updateOne(
+                { _id: order._id },
+                { $set: { confirmationEmailSent: true, confirmationEmailSentAt: new Date() } }
+              );
+            }
+          })
+          .catch(err => {
+            console.error('Failed to send order confirmation email via webhook:', err);
+            // Don't fail the webhook if email fails
+          });
       }
       
       console.log('✅ Order created via webhook:', order.reference);
