@@ -75,20 +75,64 @@ export async function POST(req) {
       amount: order.amount
     });
     
-    // Send order confirmation email (non-blocking) and mark flag
+    // Send order confirmation email with improved error handling
     if (order.customer?.email) {
       console.log('📧 Sending confirmation email for new order:', order.reference);
+      
+      // Initialize email tracking
+      await db.collection('orders').updateOne(
+        { _id: order._id },
+        { 
+          $set: { 
+            emailAttempts: 1,
+            lastEmailAttempt: new Date()
+          }
+        }
+      );
+      
+      // Try to send email immediately
       sendOrderConfirmationEmail(order)
         .then(async (result) => {
           console.log('📧 Email send result (new):', result);
           if (result?.success) {
             await db.collection('orders').updateOne(
               { _id: order._id },
-              { $set: { confirmationEmailSent: true, confirmationEmailSentAt: new Date() } }
+              { 
+                $set: { 
+                  confirmationEmailSent: true, 
+                  confirmationEmailSentAt: new Date()
+                },
+                $unset: { confirmationEmailError: "" }
+              }
             );
+            console.log('✅ Confirmation email sent immediately for:', order.reference);
+          } else {
+            await db.collection('orders').updateOne(
+              { _id: order._id },
+              { 
+                $set: { 
+                  confirmationEmailError: result?.error || 'Unknown error',
+                  lastEmailAttempt: new Date()
+                }
+              }
+            );
+            console.log('❌ Immediate email failed, will retry via automation:', result?.error);
           }
         })
-        .catch((err) => { console.error('❌ Email send failed (new):', err?.message || err); });
+        .catch(async (err) => { 
+          console.error('❌ Email send failed (new):', err?.message || err);
+          await db.collection('orders').updateOne(
+            { _id: order._id },
+            { 
+              $set: { 
+                confirmationEmailError: err?.message || 'Unknown error',
+                lastEmailAttempt: new Date()
+              }
+            }
+          );
+        });
+    } else {
+      console.log('⚠️ No customer email provided for order:', order.reference);
     }
     
     return NextResponse.json({ ok: true, order });
