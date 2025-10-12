@@ -1,11 +1,10 @@
 "use client";
 import Link from 'next/link';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
 import { FiCheckCircle, FiCopy, FiPackage } from 'react-icons/fi';
 import { formatTrackingCode } from '@/lib/trackingUtils';
-
-export default function SuccessPage(){
+function SuccessContent() {
   const params = useSearchParams();
   const ref = params?.get('reference') || '';
   const [orderStatus, setOrderStatus] = useState('checking'); // checking, found, not-found
@@ -19,21 +18,17 @@ export default function SuccessPage(){
         try {
           const response = await fetch(`/api/orders?reference=${encodeURIComponent(ref)}`);
           const data = await response.json();
-          
           if (data.ok && data.orders && data.orders.length > 0) {
             setOrderStatus('found');
             setOrderDetails(data.orders[0]);
           } else {
             setOrderStatus('not-found');
-            // Try again after 5 seconds (webhook might be delayed)
             setTimeout(checkOrder, 5000);
           }
         } catch (error) {
-          console.error('Error checking order:', error);
           setOrderStatus('not-found');
         }
       };
-      
       checkOrder();
     }
   }, [ref]);
@@ -44,7 +39,6 @@ export default function SuccessPage(){
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      // Fallback for older browsers
       const textArea = document.createElement('textarea');
       textArea.value = ref;
       document.body.appendChild(textArea);
@@ -62,11 +56,8 @@ export default function SuccessPage(){
         <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
           <FiCheckCircle className="w-8 h-8 text-green-600" />
         </div>
-        
         <h1 className="text-2xl font-bold mb-2">Payment Successful! 🎉</h1>
         <p className="text-gray-600 mb-6">Thank you for your order. Your payment has been processed successfully.</p>
-        
-        {/* Tracking Code Section */}
         <div className="bg-gray-50 rounded-lg p-4 mb-6">
           <h3 className="text-sm font-medium text-gray-700 mb-2">Your Tracking Code</h3>
           <div className="flex items-center justify-center gap-2 mb-2">
@@ -86,8 +77,6 @@ export default function SuccessPage(){
           )}
           <p className="text-xs text-gray-500">Save this code to track your order</p>
         </div>
-
-        {/* Order Status */}
         <div className="mb-6">
           {orderStatus === 'checking' && (
             <div className="text-blue-600 flex items-center justify-center gap-2">
@@ -95,7 +84,6 @@ export default function SuccessPage(){
               Verifying your order...
             </div>
           )}
-          
           {orderStatus === 'found' && orderDetails && (
             <div className="text-green-600">
               <div className="flex items-center justify-center gap-2 mb-2">
@@ -110,7 +98,6 @@ export default function SuccessPage(){
               </p>
             </div>
           )}
-          
           {orderStatus === 'not-found' && (
             <div className="text-orange-600">
               <div className="flex items-center justify-center gap-2 mb-2">
@@ -123,8 +110,6 @@ export default function SuccessPage(){
             </div>
           )}
         </div>
-
-        {/* Action Buttons */}
         <div className="space-y-3">
           <Link 
             href={`/track-order?code=${encodeURIComponent(ref)}`}
@@ -132,7 +117,6 @@ export default function SuccessPage(){
           >
             Track Your Order
           </Link>
-          
           <div className="flex gap-3">
             <Link 
               href="/menu" 
@@ -148,18 +132,18 @@ export default function SuccessPage(){
             </Link>
           </div>
         </div>
-
-        {/* Order Notification Info */}
         <div className="mt-6 p-4 bg-blue-50 rounded-lg text-left">
           <h4 className="font-medium text-blue-900 mb-2">What happens next?</h4>
-          <ul className="text-sm text-blue-800 space-y-1">
-            <li>• Your order is being prepared by our kitchen</li>
-            <li>• You can track your order status using the code above</li>
-            <li>• Estimated preparation time: 20-30 minutes</li>
-            <li>• You will receive updates on your order progress</li>
-          </ul>
         </div>
       </div>
     </main>
-  )
+  );
+}
+
+export default function SuccessPage() {
+  return (
+    <Suspense fallback={<main className="max-w-2xl mx-auto p-8 text-center"><div>Loading...</div></main>}>
+      <SuccessContent />
+    </Suspense>
+  );
 }
