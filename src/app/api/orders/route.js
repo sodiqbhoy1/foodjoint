@@ -30,7 +30,7 @@ export async function POST(req) {
     const db = await getDb();
     
     // Check for duplicate orders by reference
-    if (order.reference) {
+  if (order.reference) {
       const existingOrder = await db.collection('orders').findOne({ 
         reference: order.reference 
       });
@@ -38,8 +38,10 @@ export async function POST(req) {
       if (existingOrder) {
         // If confirmation email not yet sent and email is available, send it now
         if (!existingOrder.confirmationEmailSent && existingOrder.customer?.email) {
+          console.log('📧 Resending confirmation email for existing order:', existingOrder.reference);
           sendOrderConfirmationEmail(existingOrder)
             .then(async (result) => {
+              console.log('📧 Email send result (existing):', result);
               if (result?.success) {
                 await db.collection('orders').updateOne(
                   { _id: existingOrder._id },
@@ -47,7 +49,7 @@ export async function POST(req) {
                 );
               }
             })
-            .catch(() => { /* silent */ });
+            .catch((err) => { console.error('❌ Email send failed (existing):', err?.message || err); });
         }
         return NextResponse.json({ ok: true, order: existingOrder, message: 'Order already exists' });
       }
@@ -75,8 +77,10 @@ export async function POST(req) {
     
     // Send order confirmation email (non-blocking) and mark flag
     if (order.customer?.email) {
+      console.log('📧 Sending confirmation email for new order:', order.reference);
       sendOrderConfirmationEmail(order)
         .then(async (result) => {
+          console.log('📧 Email send result (new):', result);
           if (result?.success) {
             await db.collection('orders').updateOne(
               { _id: order._id },
@@ -84,7 +88,7 @@ export async function POST(req) {
             );
           }
         })
-        .catch(() => { /* silent */ });
+        .catch((err) => { console.error('❌ Email send failed (new):', err?.message || err); });
     }
     
     return NextResponse.json({ ok: true, order });

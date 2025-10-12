@@ -9,6 +9,8 @@ export default function AdminOrdersPage() {
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [statusFilter, setStatusFilter] = useState('all');
+  const [resendLoadingId, setResendLoadingId] = useState(null);
+  const [toast, setToast] = useState(null);
 
   useEffect(() => {
     loadOrders();
@@ -25,6 +27,29 @@ export default function AdminOrdersPage() {
       console.error('Failed to load orders:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const resendEmail = async (order) => {
+    try {
+      setResendLoadingId(order._id);
+      const res = await fetch('/api/orders/resend', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: order._id })
+      });
+      const data = await res.json();
+      if (data.ok && data.result?.success) {
+        setToast({ type: 'success', message: 'Confirmation email resent successfully.' });
+        loadOrders();
+      } else {
+        setToast({ type: 'error', message: data.error || 'Failed to resend email.' });
+      }
+    } catch (err) {
+      setToast({ type: 'error', message: err.message || 'Failed to resend email.' });
+    } finally {
+      setResendLoadingId(null);
+      setTimeout(() => setToast(null), 3000);
     }
   };
 
@@ -243,6 +268,16 @@ export default function AdminOrdersPage() {
                             >
                               <FiEye className="w-4 h-4" />
                             </button>
+                            {!order.confirmationEmailSent && order.customer?.email && (
+                              <button
+                                onClick={() => resendEmail(order)}
+                                className="text-xs px-2 py-1 border rounded hover:bg-gray-50"
+                                disabled={resendLoadingId === order._id}
+                                title="Resend confirmation email"
+                              >
+                                {resendLoadingId === order._id ? 'Resending...' : 'Resend Email'}
+                              </button>
+                            )}
                             {order.status !== 'delivered' && (
                               <select
                                 value={order.status || 'pending'}
@@ -344,6 +379,15 @@ export default function AdminOrdersPage() {
                         <option value="delivered">Delivered</option>
                       </select>
                     )}
+                    {!selectedOrder.confirmationEmailSent && selectedOrder.customer?.email && (
+                      <button
+                        onClick={() => resendEmail(selectedOrder)}
+                        className="text-xs sm:text-sm px-3 py-2 border rounded hover:bg-gray-50"
+                        disabled={resendLoadingId === selectedOrder._id}
+                      >
+                        {resendLoadingId === selectedOrder._id ? 'Resending...' : 'Resend Email'}
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -382,6 +426,11 @@ export default function AdminOrdersPage() {
           </div>
         )}
       </section>
+      {toast && (
+        <div className={`fixed bottom-6 right-6 px-4 py-2 rounded shadow text-white ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}>
+          {toast.message}
+        </div>
+      )}
     </AdminLayout>
   );
 }
