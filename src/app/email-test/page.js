@@ -131,7 +131,7 @@ export default function EmailTestPage() {
             <h3 className="font-semibold mb-2">🔍 Troubleshooting Guide</h3>
             <ul className="text-sm space-y-2">
               <li><strong>Environment Check:</strong> Verify EMAIL_USER and EMAIL_PASS are set in Vercel dashboard</li>
-              <li><strong>Gmail Setup:</strong> Ensure you're using an App Password (not regular password)</li>
+              <li><strong>Gmail Setup:</strong> Ensure you&apos;re using an App Password (not regular password)</li>
               <li><strong>Verification Failed:</strong> This is often normal on Vercel - emails may still work</li>
               <li><strong>Email Send Failed:</strong> Check Gmail settings and verify credentials</li>
               <li><strong>Timeout Errors:</strong> Vercel has strict timeouts - this is expected behavior</li>

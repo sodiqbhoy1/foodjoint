@@ -55,10 +55,6 @@ function ResetPasswordForm() {
     validateToken();
   }, [token]);
 
-  const validateToken = useCallback(async () => {
-    // This function is no longer needed since we moved the logic to useEffect
-  }, [token]);
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
