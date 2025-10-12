@@ -108,9 +108,9 @@ export default function TrackOrderPage() {
               <input
                 type="text"
                 value={trackingCode}
-                onChange={(e) => setTrackingCode(e.target.value)}
+                onChange={(e) => setTrackingCode(e.target.value.toUpperCase())}
                 placeholder="Enter your tracking code (e.g., FJ12345678)"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[var(--brand)] text-sm"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[var(--brand)] text-sm uppercase"
                 onKeyPress={(e) => e.key === 'Enter' && trackOrder()}
               />
             </div>

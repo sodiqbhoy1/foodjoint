@@ -30,17 +30,19 @@ export async function sendOrderConfirmationEmail(orderDetails) {
       return { success: false, message: 'No customer email provided' };
     }
 
-    // Import nodemailer (will be installed)
-    const nodemailer = require('nodemailer');
+  // Import nodemailer
+  const nodemailer = require('nodemailer');
     console.log('📧 Nodemailer imported successfully');
     
-    // Create transporter
+    // Create transporter (use SMTP for reliability)
     const transporter = nodemailer.createTransport({
-      service: 'gmail',
+      host: 'smtp.gmail.com',
+      port: 465,
+      secure: true,
       auth: {
         user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-      }
+        pass: process.env.EMAIL_PASS,
+      },
     });
     console.log('📧 Transporter created');
 
@@ -74,16 +76,18 @@ export async function sendPasswordResetEmail(email, resetToken) {
       return { success: true, message: 'Email service not configured' };
     }
 
-    // Import nodemailer
-    const nodemailer = require('nodemailer');
+  // Import nodemailer
+  const nodemailer = require('nodemailer');
     
     // Create transporter
-    const transporter = nodemailer.createTransporter({
-      service: 'gmail',
+    const transporter = nodemailer.createTransport({
+      host: 'smtp.gmail.com',
+      port: 465,
+      secure: true,
       auth: {
         user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-      }
+        pass: process.env.EMAIL_PASS,
+      },
     });
 
     const resetUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/admin/reset-password?token=${resetToken}`;
@@ -107,6 +111,16 @@ export async function sendPasswordResetEmail(email, resetToken) {
     console.error('❌ Password reset email error:', error);
     return { success: false, error: error.message };
   }
+}
+
+export function getEmailConfigStatus() {
+  const user = process.env.EMAIL_USER;
+  const pass = process.env.EMAIL_PASS;
+  return {
+    configured: Boolean(user && pass),
+    userPresent: Boolean(user),
+    passPresent: Boolean(pass),
+  };
 }
 
 function generatePasswordResetHTML(resetUrl) {
@@ -234,8 +248,8 @@ function generateOrderConfirmationHTML(orderDetails) {
                     <h3>Order Items</h3>
                     ${items.map(item => `
                         <div class="item">
-                            <span>${item.title || item.name} x ${item.qty || item.quantity || 1}</span>
-                            <span>₦${((item.price || 0) * (item.qty || item.quantity || 1)).toFixed(2)}</span>
+                            <span class="mx-3">${item.title || item.name} x ${item.qty || item.quantity || 1}</span>
+                            <span class="mx-3">₦${((item.price || 0) * (item.qty || item.quantity || 1)).toFixed(2)}</span>
                         </div>
                     `).join('')}
                     <div class="total">

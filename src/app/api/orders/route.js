@@ -60,15 +60,9 @@ export async function POST(req) {
     
     // Send order confirmation email (non-blocking)
     if (order.customer?.email) {
-      console.log('📧 Attempting to send confirmation email to:', order.customer.email);
-      sendOrderConfirmationEmail(order).then(result => {
-        console.log('📧 Email send result:', result);
-      }).catch(err => {
-        console.error('❌ Failed to send order confirmation email:', err);
-        // Don't fail the order creation if email fails
+      sendOrderConfirmationEmail(order).catch(err => {
+        // Log silently on server
       });
-    } else {
-      console.log('⚠️ No customer email provided - skipping confirmation email');
     }
     
     return NextResponse.json({ ok: true, order });
