@@ -101,7 +101,7 @@ export default function Menu(){
                 )}
 
                 {/* Changed max-width and margins to match the left-aligned look of the screenshot */}
-                <main className="max-w-4xl mx-auto md:ml-20 px-4 py-8">
+                <main className="max-w-4xl mx-auto md:ml-20 px-3 sm:px-4 py-6 sm:py-8">
                         {/* We will hide the generic "Our Menu" heading to use the custom 'COMBO DEALS' heading */}
                         {/* <h2 className="text-2xl font-bold mb-4 text-[var(--foreground)]">Our Menu</h2> */}
 
@@ -110,7 +110,7 @@ export default function Menu(){
                         ) : (
                             <section className="flex flex-col gap-4">
                                 {/* CUSTOM HEADING for 'COMBO DEALS' to match the screenshot's style */}
-                                <h2 className="text-3xl font-bold mb-4 text-[var(--brand-dark)] border-b-4 border-[var(--brand)] inline-block">COMBO DEALS</h2>
+                                <h2 className="text-2xl md:text-3xl font-bold mb-4 text-[var(--brand-dark)] border-b-4 border-[var(--brand)] inline-block">COMBO DEALS</h2>
 
                                 <div className="flex flex-col gap-4">
                                     {menu.map((item) => {
@@ -137,13 +137,12 @@ export default function Menu(){
                                         }
 
                                         return (
-                                            // The key styling change: remove the border-b, use flex to align children
-                                            <article key={key} className="w-full flex items-start py-4 border-b border-gray-200" style={{ color: 'var(--foreground)' }}>
+                                            // Responsive layout: vertical on mobile, horizontal on larger screens
+                                            <article key={key} className="w-full flex flex-col sm:flex-row sm:items-start py-4 border-b border-gray-200 gap-4" style={{ color: 'var(--foreground)' }}>
                                                 
-                                                {/* 1. Left: Image (fixed size 150px) */}
-                                                <div className="w-[150px] h-[100px] flex-shrink-0 overflow-hidden rounded-md mr-4">
+                                                {/* 1. Image - responsive sizing */}
+                                                <div className="w-full sm:w-[150px] h-[200px] sm:h-[100px] flex-shrink-0 overflow-hidden rounded-md">
                                                     {img ? (
-                                                        // Using 'cover' to ensure the image fills the space without distortion
                                                         <Image 
                                                             src={img} 
                                                             alt={title} 
@@ -156,60 +155,66 @@ export default function Menu(){
                                                     )}
                                                 </div>
 
-                                                {/* 2. Center: Title and Description (grows to fill space) */}
-                                                <div className="flex-1 min-w-0 mr-4">
-                                                    {/* Font changes for the title to be bold, black, and slightly larger */}
-                                                    <h3 className="text-lg font-bold text-black mb-1">{title}</h3>
-                                                    {/* Styling for the description text */}
-                                                    <p className="text-sm text-gray-600 max-w-lg mb-4">{description}</p>
+                                                {/* 2. Content section - title, description, and controls */}
+                                                <div className="flex-1 flex flex-col gap-3">
+                                                    {/* Title and Description */}
+                                                    <div>
+                                                        <h3 className="text-lg md:text-xl font-bold text-black mb-2">{title}</h3>
+                                                        <p className="text-sm md:text-base text-gray-600 leading-relaxed">{description}</p>
+                                                    </div>
                                                     
-                                                    {/* Action button on the left, under the description (visible only in stock) */}
-                                                    {inStock ? (
-                                                        <button onClick={addToCart} className="text-sm bg-red-600 text-white px-4 py-2 font-semibold hover:bg-red-700 transition-colors" style={{ borderRadius: '4px', cursor: 'pointer' }}>
-                                                            Add to Cart
-                                                        </button>
-                                                    ) : (
-                                                        <span className="text-sm bg-gray-400 text-white px-4 py-2 font-semibold rounded-md">
-                                                            Out of Stock
-                                                        </span>
-                                                    )}
-                                                </div>
-
-                                                {/* 3. Right: Quantity and Price (aligned to the right) */}
-                                                {/* Use flex-col and align-end to stack and right-align content */}
-                                                <div className="flex flex-col items-end gap-2 pl-4">
-                                                    
-                                                    {/* Quantity Control (only visible if in stock) */}
-                                                    {inStock && (
-                                                        <div className="inline-flex items-center border border-gray-300 rounded-md overflow-hidden bg-white" role="group" aria-label={`Quantity controls for ${title}`}>
-                                                            {/* Minus Button */}
-                                                            <button 
-                                                                onClick={() => changeQty(key, -1)} 
-                                                                className="px-2 py-1 text-gray-600 hover:bg-gray-100 transition-colors disabled:opacity-50" 
-                                                                style={{ cursor: 'pointer' }} 
-                                                                disabled={qty <= 1}
-                                                            >
-                                                                <FiMinus size={14} />
-                                                            </button>
-                                                            {/* Quantity Display */}
-                                                            <div className="px-3 py-1 text-center font-medium text-black text-sm border-l border-r border-gray-300">
-                                                                {qty}
-                                                            </div>
-                                                            {/* Plus Button */}
-                                                            <button 
-                                                                onClick={() => changeQty(key, 1)} 
-                                                                className="px-2 py-1 text-gray-600 hover:bg-gray-100 transition-colors" 
-                                                                style={{ cursor: 'pointer' }}
-                                                            >
-                                                                <FiPlus size={14} />
-                                                            </button>
+                                                    {/* Controls section - responsive layout */}
+                                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                                        {/* Left side: Quantity and Add button */}
+                                                        <div className="flex items-center gap-3">
+                                                            {/* Quantity Control (only visible if in stock) */}
+                                                            {inStock && (
+                                                                <div className="inline-flex items-center border border-gray-300 rounded-md overflow-hidden bg-white" role="group" aria-label={`Quantity controls for ${title}`}>
+                                                                    {/* Minus Button - larger touch target */}
+                                                                    <button 
+                                                                        onClick={() => changeQty(key, -1)} 
+                                                                        className="px-3 py-2 text-gray-600 hover:bg-gray-100 transition-colors disabled:opacity-50 min-w-[40px]" 
+                                                                        style={{ cursor: 'pointer' }} 
+                                                                        disabled={qty <= 1}
+                                                                    >
+                                                                        <FiMinus size={16} />
+                                                                    </button>
+                                                                    {/* Quantity Display - larger for better readability */}
+                                                                    <div className="px-4 py-2 text-center font-medium text-black border-l border-r border-gray-300 min-w-[50px]">
+                                                                        {qty}
+                                                                    </div>
+                                                                    {/* Plus Button - larger touch target */}
+                                                                    <button 
+                                                                        onClick={() => changeQty(key, 1)} 
+                                                                        className="px-3 py-2 text-gray-600 hover:bg-gray-100 transition-colors min-w-[40px]" 
+                                                                        style={{ cursor: 'pointer' }}
+                                                                    >
+                                                                        <FiPlus size={16} />
+                                                                    </button>
+                                                                </div>
+                                                            )}
+                                                            
+                                                            {/* Add to Cart button - larger and more prominent */}
+                                                            {inStock ? (
+                                                                <button 
+                                                                    onClick={addToCart} 
+                                                                    className="bg-red-600 text-white px-6 py-2 md:px-8 md:py-3 font-semibold hover:bg-red-700 transition-colors rounded-md text-sm md:text-base flex items-center gap-2"
+                                                                >
+                                                                    <FiShoppingCart size={16} />
+                                                                    Add to Cart
+                                                                </button>
+                                                            ) : (
+                                                                <span className="bg-gray-400 text-white px-6 py-2 md:px-8 md:py-3 font-semibold rounded-md text-sm md:text-base">
+                                                                    Out of Stock
+                                                                </span>
+                                                            )}
                                                         </div>
-                                                    )}
 
-                                                    {/* Price Display (styled to match the bold, large, right-aligned look) */}
-                                                    <span className="text-xl font-bold text-red-600">{price}</span>
-                                                    
-                                                    {/* Placeholder for the Add button if not using the one under the description, but we'll use the one under the description */}
+                                                        {/* Right side: Price - more prominent */}
+                                                        <div className="flex justify-start sm:justify-end">
+                                                            <span className="text-xl md:text-2xl font-bold text-red-600">{price}</span>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </article>
                                         )
