@@ -13,7 +13,7 @@ export async function POST(request) {
       }, { status: 401 });
     }
 
-    console.log('🧪 Starting email diagnostics...');
+  // Starting email diagnostics
     
     // Environment check
     const envCheck = {
@@ -24,7 +24,7 @@ export async function POST(request) {
       vercelEnv: process.env.VERCEL_ENV || 'NOT_VERCEL'
     };
     
-    console.log('🔍 Environment check:', envCheck);
+  // Environment check
 
     if (testType === 'env-only') {
       return Response.json({
@@ -39,7 +39,7 @@ export async function POST(request) {
     try {
       const nodemailerModule = await import('nodemailer');
       nodemailer = nodemailerModule.default || nodemailerModule;
-      console.log('✅ Nodemailer imported successfully');
+  // Nodemailer imported successfully
     } catch (importErr) {
       console.error('❌ Nodemailer import failed:', importErr);
       return Response.json({
@@ -76,7 +76,7 @@ export async function POST(request) {
     let verificationResult = 'SKIPPED';
     if (testType === 'full') {
       try {
-        console.log('🔍 Testing transporter verification...');
+  // Testing transporter verification
         const verifyPromise = transporter.verify();
         const timeoutPromise = new Promise((_, reject) => 
           setTimeout(() => reject(new Error('Verification timeout')), 10000)
@@ -84,10 +84,10 @@ export async function POST(request) {
         
         await Promise.race([verifyPromise, timeoutPromise]);
         verificationResult = 'SUCCESS';
-        console.log('✅ Transporter verified');
+  // Transporter verified
       } catch (verifyError) {
         verificationResult = `FAILED: ${verifyError.message}`;
-        console.log('⚠️ Verification failed:', verifyError.message);
+  console.error('Verification failed:', verifyError.message);
       }
     }
 
@@ -95,7 +95,7 @@ export async function POST(request) {
     let emailResult = 'SKIPPED';
     if (testType === 'full') {
       try {
-        console.log('📧 Sending test email...');
+  // Sending test email
         const testEmail = {
           from: `"FoodJoint Test" <${process.env.EMAIL_USER}>`,
           to: process.env.EMAIL_USER, // Send to self
@@ -113,10 +113,10 @@ export async function POST(request) {
 
         const result = await transporter.sendMail(testEmail);
         emailResult = `SUCCESS: ${result.messageId}`;
-        console.log('✅ Test email sent:', result.messageId);
+  // Test email sent
       } catch (emailError) {
         emailResult = `FAILED: ${emailError.message}`;
-        console.error('❌ Test email failed:', emailError);
+  console.error('Test email failed:', emailError);
       }
     }
 

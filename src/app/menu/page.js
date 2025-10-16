@@ -137,11 +137,11 @@ export default function Menu(){
                                         }
 
                                         return (
-                                            // Responsive layout: vertical on mobile, horizontal on larger screens
-                                            <article key={key} className="w-full flex flex-col sm:flex-row sm:items-start py-4 border-b border-gray-200 gap-4" style={{ color: 'var(--foreground)' }}>
+                                            // Responsive layout: image on the left on small screens, horizontal on larger screens
+                                            <article key={key} className="w-full flex flex-row items-start py-4 border-b border-gray-200 gap-4" style={{ color: 'var(--foreground)' }}>
                                                 
                                                 {/* 1. Image - responsive sizing */}
-                                                <div className="w-full sm:w-[150px] h-[200px] sm:h-[100px] flex-shrink-0 overflow-hidden rounded-md">
+                                                <div className="w-[90px] h-[90px] sm:w-[150px] sm:h-[100px] flex-shrink-0 overflow-hidden rounded-md">
                                                     {img ? (
                                                         <Image 
                                                             src={img} 
@@ -164,9 +164,9 @@ export default function Menu(){
                                                     </div>
                                                     
                                                     {/* Controls section - responsive layout */}
-                                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
                                                         {/* Left side: Quantity and Add button */}
-                                                        <div className="flex items-center gap-3">
+                                                            <div className="flex items-center gap-3">
                                                             {/* Quantity Control (only visible if in stock) */}
                                                             {inStock && (
                                                                 <div className="inline-flex items-center border border-gray-300 rounded-md overflow-hidden bg-white" role="group" aria-label={`Quantity controls for ${title}`}>
@@ -196,12 +196,17 @@ export default function Menu(){
                                                             
                                                             {/* Add to Cart button - larger and more prominent */}
                                                             {inStock ? (
-                                                                <button 
-                                                                    onClick={addToCart} 
-                                                                    className="bg-red-600 text-white px-6 py-2 md:px-8 md:py-3 font-semibold hover:bg-red-700 transition-colors rounded-md text-sm md:text-base flex items-center gap-2"
+                                                                <button
+                                                                    onClick={addToCart}
+                                                                    aria-label={`Add ${title} to cart`}
+                                                                    className="inline-flex items-center gap-2 bg-red-600 text-white px-3 py-2 md:px-6 md:py-3 font-semibold hover:bg-red-700 transition-colors rounded-md text-sm md:text-base"
                                                                 >
-                                                                    <FiShoppingCart size={16} />
-                                                                    Add to Cart
+                                                                    {/* Show compact '+' on small screens, label on md+ */}
+                                                                    <FiPlus size={16} className="sm:hidden" />
+                                                                    <span className="hidden sm:inline-flex items-center gap-2">
+                                                                        <FiShoppingCart size={16} />
+                                                                        Add to Cart
+                                                                    </span>
                                                                 </button>
                                                             ) : (
                                                                 <span className="bg-gray-400 text-white px-6 py-2 md:px-8 md:py-3 font-semibold rounded-md text-sm md:text-base">

@@ -37,10 +37,24 @@ async function handlePasswordResetRequest(email) {
     }, { status: 400 });
   }
 
-  const db = await getDb();
-  
+  // Try Mongoose Admin model first
+  let Admin = null;
+  try {
+    const { connectMongoose } = await import('@/lib/mongoose');
+    await connectMongoose();
+    Admin = (await import('@/models/Admin')).default;
+  } catch (e) {
+    // ignore, will use native driver
+  }
+
   // Check if admin exists
-  const admin = await db.collection('admins').findOne({ email });
+  let admin = null;
+  if (Admin) {
+    admin = await Admin.findOne({ email }).lean().exec();
+  } else {
+    const db = await getDb();
+    admin = await db.collection('admins').findOne({ email });
+  }
   if (!admin) {
     // Don't reveal that email doesn't exist for security
     return NextResponse.json({ 
@@ -53,16 +67,23 @@ async function handlePasswordResetRequest(email) {
   const resetToken = crypto.randomBytes(32).toString('hex');
   const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour from now
 
-  // Save reset token to database
-  await db.collection('admins').updateOne(
-    { email },
-    { 
-      $set: { 
-        resetToken,
-        resetTokenExpiry
+  // Save reset token to database (model or native)
+  if (Admin) {
+    await Admin.updateOne({ email }, { $set: { resetToken, resetTokenExpiry } }).exec?.();
+    // If updateOne doesn't return exec, call without it
+    await Admin.updateOne({ email }, { $set: { resetToken, resetTokenExpiry } });
+  } else {
+    const db = await getDb();
+    await db.collection('admins').updateOne(
+      { email },
+      { 
+        $set: { 
+          resetToken,
+          resetTokenExpiry
+        }
       }
-    }
-  );
+    );
+  }
 
   // Send reset email
   try {
@@ -93,13 +114,21 @@ async function handlePasswordReset(token, newPassword) {
     }, { status: 400 });
   }
 
-  const db = await getDb();
-  
-  // Find admin with valid reset token
-  const admin = await db.collection('admins').findOne({
-    resetToken: token,
-    resetTokenExpiry: { $gt: new Date() }
-  });
+  // Try model first
+  let Admin = null;
+  try {
+    const { connectMongoose } = await import('@/lib/mongoose');
+    await connectMongoose();
+    Admin = (await import('@/models/Admin')).default;
+  } catch (e) {}
+
+  let admin = null;
+  if (Admin) {
+    admin = await Admin.findOne({ resetToken: token, resetTokenExpiry: { $gt: new Date() } }).lean().exec();
+  } else {
+    const db = await getDb();
+    admin = await db.collection('admins').findOne({ resetToken: token, resetTokenExpiry: { $gt: new Date() } });
+  }
 
   if (!admin) {
     return NextResponse.json({ 
@@ -111,14 +140,19 @@ async function handlePasswordReset(token, newPassword) {
   // Hash new password
   const hashedPassword = await bcrypt.hash(newPassword, 12);
 
-  // Update password and remove reset token
-  await db.collection('admins').updateOne(
-    { _id: admin._id },
-    { 
-      $set: { password: hashedPassword },
-      $unset: { resetToken: '', resetTokenExpiry: '' }
-    }
-  );
+  // Update password and remove reset token (model or native)
+  if (Admin) {
+    await Admin.updateOne({ _id: admin._id }, { $set: { passwordHash: hashedPassword }, $unset: { resetToken: '', resetTokenExpiry: '' } });
+  } else {
+    const db = await getDb();
+    await db.collection('admins').updateOne(
+      { _id: admin._id },
+      { 
+        $set: { password: hashedPassword },
+        $unset: { resetToken: '', resetTokenExpiry: '' }
+      }
+    );
+  }
 
   return NextResponse.json({ 
     ok: true, 
@@ -134,13 +168,21 @@ async function handleTokenValidation(token) {
     }, { status: 400 });
   }
 
-  const db = await getDb();
-  
-  // Check if token exists and is not expired
-  const admin = await db.collection('admins').findOne({
-    resetToken: token,
-    resetTokenExpiry: { $gt: new Date() }
-  });
+  // Try Admin model first
+  let Admin = null;
+  try {
+    const { connectMongoose } = await import('@/lib/mongoose');
+    await connectMongoose();
+    Admin = (await import('@/models/Admin')).default;
+  } catch (e) {}
+
+  let admin = null;
+  if (Admin) {
+    admin = await Admin.findOne({ resetToken: token, resetTokenExpiry: { $gt: new Date() } }).lean().exec();
+  } else {
+    const db = await getDb();
+    admin = await db.collection('admins').findOne({ resetToken: token, resetTokenExpiry: { $gt: new Date() } });
+  }
 
   if (!admin) {
     return NextResponse.json({ 

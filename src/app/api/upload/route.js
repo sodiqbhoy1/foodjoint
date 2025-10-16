@@ -51,11 +51,11 @@ export async function POST(req) {
     fs.writeFileSync(filepath, buffer);
     const url = `/uploads/${filename}`;
 
-    console.log('✅ Image uploaded successfully:', url);
+  // Image uploaded successfully
     return NextResponse.json({ ok: true, url });
     
   } catch (error) {
-    console.error('❌ Upload error:', error);
+  console.error('Upload error:', error);
     return NextResponse.json({ 
       ok: false, 
       error: 'Failed to upload file: ' + error.message 

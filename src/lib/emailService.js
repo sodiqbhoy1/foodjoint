@@ -1,33 +1,18 @@
 /**
  * Email service using Nodemailer + Gmail
- * Simple, free, and reliable email sending
+ * Cleaned: removed console.log and emoji characters for production.
  */
 
 export async function sendOrderConfirmationEmail(orderDetails) {
   try {
-    console.log('📧 Attempting to send order confirmation email...');
-    console.log('📧 Order details:', {
-      reference: orderDetails.reference,
-      customerEmail: orderDetails.customer?.email,
-      customerName: orderDetails.customer?.name,
-      amount: orderDetails.amount
-    });
-
-    // Check if email is configured
-    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-      console.log('❌ Email not configured - missing EMAIL_USER or EMAIL_PASS');
-      console.log('📧 Would send:', {
-        to: orderDetails.customer.email,
-        subject: `Order Confirmation - Tracking Code: ${orderDetails.reference}`,
-        reference: orderDetails.reference
-      });
-      return { success: false, message: 'Email service not configured' };
+    // Basic validation
+    if (!orderDetails || !orderDetails.customer?.email) {
+      return { success: false, message: 'No customer email provided' };
     }
 
-    // Validate customer email
-    if (!orderDetails.customer?.email) {
-      console.log('❌ No customer email provided');
-      return { success: false, message: 'No customer email provided' };
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+      console.error('Email not configured - missing EMAIL_USER or EMAIL_PASS');
+      return { success: false, message: 'Email service not configured' };
     }
 
     // Import nodemailer dynamically for better Vercel compatibility
@@ -36,114 +21,86 @@ export async function sendOrderConfirmationEmail(orderDetails) {
       const nodemailerModule = await import('nodemailer');
       nodemailer = nodemailerModule.default || nodemailerModule;
     } catch (importErr) {
-      console.error('❌ Failed to import nodemailer:', importErr);
+      console.error('Failed to import nodemailer:', importErr);
       return { success: false, error: 'Email service unavailable' };
     }
-    console.log('📧 Nodemailer imported successfully');
-    
-    // Create transporter with Vercel-optimized settings
+
     const transporter = nodemailer.createTransport({
       host: 'smtp.gmail.com',
-      port: 587, // Changed to 587 for better Vercel compatibility
-      secure: false, // Use STARTTLS instead of SSL
+      port: 587,
+      secure: false,
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
       },
-      tls: {
-        rejectUnauthorized: false // For compatibility with various hosting environments
-      }
+      tls: { rejectUnauthorized: false },
     });
-    
+
     // Verify transporter with timeout for Vercel
     try {
-      console.log('📧 Verifying email transporter...');
       const verifyPromise = transporter.verify();
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Email verification timeout')), 10000)
-      );
-      
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Email verification timeout')), 10000));
       await Promise.race([verifyPromise, timeoutPromise]);
-      console.log('✅ Email transporter verified successfully');
     } catch (verifyError) {
-      console.log('⚠️ Email transporter verification failed (proceeding anyway):', verifyError.message);
-      // Continue anyway - some hosting environments have verification issues but email still works
+      console.error('Email transporter verification failed (proceeding anyway):', verifyError.message);
     }
-    console.log('📧 Transporter created');
 
-    // Email content
     const mailOptions = {
       from: `"FoodJoint Orders" <${process.env.EMAIL_USER}>`,
       to: orderDetails.customer.email,
-      subject: `🍕 Order Confirmation - Tracking Code: ${orderDetails.reference}`,
+      subject: `Order Confirmation - Tracking Code: ${orderDetails.reference}`,
       text: generateOrderConfirmationText(orderDetails),
-      html: generateOrderConfirmationHTML(orderDetails)
+      html: generateOrderConfirmationHTML(orderDetails),
     };
-    console.log('📧 Mail options prepared for:', orderDetails.customer.email);
 
-    // Send email
     const result = await transporter.sendMail(mailOptions);
-    
-    console.log('✅ Email sent successfully:', result.messageId);
     return { success: true, messageId: result.messageId };
-    
   } catch (error) {
-    console.error('❌ Email service error:', error);
+    console.error('Email service error:', error);
     return { success: false, error: error.message };
   }
 }
 
 export async function sendPasswordResetEmail(email, resetToken) {
   try {
-    // Check if email is configured
     if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-      console.log('📧 Password reset email not configured - would send to:', email);
-      return { success: true, message: 'Email service not configured' };
+      return { success: false, message: 'Email service not configured' };
     }
 
-    // Import nodemailer dynamically for better Vercel compatibility
     let nodemailer;
     try {
       const nodemailerModule = await import('nodemailer');
       nodemailer = nodemailerModule.default || nodemailerModule;
     } catch (importErr) {
-      console.error('❌ Failed to import nodemailer:', importErr);
+      console.error('Failed to import nodemailer:', importErr);
       return { success: false, error: 'Email service unavailable' };
     }
-    
-    // Create transporter with Vercel-optimized settings
-    const transporter = nodemailer.createTransporter({
+
+    const transporter = nodemailer.createTransport({
       host: 'smtp.gmail.com',
-      port: 587, // Use 587 for better Vercel compatibility
-      secure: false, // Use STARTTLS instead of SSL
+      port: 587,
+      secure: false,
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
       },
-      tls: {
-        rejectUnauthorized: false // For compatibility with various hosting environments
-      }
+      tls: { rejectUnauthorized: false },
     });
 
     const resetUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/admin/reset-password?token=${resetToken}`;
 
-    // Email content
     const mailOptions = {
       from: `"FoodJoint Admin" <${process.env.EMAIL_USER}>`,
       to: email,
-      subject: '🔐 Password Reset Request - FoodJoint Admin',
+      subject: 'Password Reset Request - FoodJoint Admin',
       text: generatePasswordResetText(resetUrl),
-      html: generatePasswordResetHTML(resetUrl)
+      html: generatePasswordResetHTML(resetUrl),
     };
 
-    // Send email
     const result = await transporter.sendMail(mailOptions);
-    
-    console.log('✅ Password reset email sent successfully:', result.messageId);
     return { success: true, messageId: result.messageId };
-    
   } catch (error) {
-    console.error('❌ Password reset email error:', error);
+    console.error('Password reset email error:', error);
     return { success: false, error: error.message };
   }
 }
@@ -151,11 +108,7 @@ export async function sendPasswordResetEmail(email, resetToken) {
 export function getEmailConfigStatus() {
   const user = process.env.EMAIL_USER;
   const pass = process.env.EMAIL_PASS;
-  return {
-    configured: Boolean(user && pass),
-    userPresent: Boolean(user),
-    passPresent: Boolean(pass),
-  };
+  return { configured: Boolean(user && pass), userPresent: Boolean(user), passPresent: Boolean(pass) };
 }
 
 function generatePasswordResetHTML(resetUrl) {
@@ -179,7 +132,7 @@ function generatePasswordResetHTML(resetUrl) {
     <body>
         <div class="container">
             <div class="header">
-                <h1>🔐 Password Reset Request</h1>
+                <h1>Password Reset Request</h1>
                 <p>FoodJoint Admin Dashboard</p>
             </div>
             
@@ -197,7 +150,7 @@ function generatePasswordResetHTML(resetUrl) {
                 </p>
                 
                 <div class="warning">
-                    <h4>⚠️ Security Notice:</h4>
+                    <h4>Security Notice:</h4>
                     <ul>
                         <li>This link will expire in 1 hour</li>
                         <li>If you didn't request this reset, please ignore this email</li>
@@ -237,8 +190,8 @@ FoodJoint Admin Team
 }
 
 function generateOrderConfirmationHTML(orderDetails) {
-  const { reference, customer, items, amount, createdAt } = orderDetails;
-  
+  const { reference, customer = {}, items = [], amount = 0, createdAt = Date.now() } = orderDetails;
+  const customerName = customer.name || 'valued customer';
   return `
     <!DOCTYPE html>
     <html>
@@ -262,8 +215,8 @@ function generateOrderConfirmationHTML(orderDetails) {
     <body>
         <div class="container">
             <div class="header">
-                <h1>🎉 Order Confirmed!</h1>
-                <p>Thank you for your order, ${customer.name || 'valued customer'}!</p>
+                <h1>Order Confirmed</h1>
+                <p>Thank you for your order, ${customerName}!</p>
             </div>
             
             <div class="content">
@@ -272,7 +225,7 @@ function generateOrderConfirmationHTML(orderDetails) {
                 <p><strong>Order ID:</strong> ${reference}</p>
                 
                 <div class="tracking-code">
-                    <h3>📦 Your Tracking Code</h3>
+                    <h3>Your Tracking Code</h3>
                     <div style="font-size: 24px; font-weight: bold; color: #CA2C33; letter-spacing: 2px;">
                         ${reference}
                     </div>
@@ -320,12 +273,12 @@ function generateOrderConfirmationHTML(orderDetails) {
 }
 
 function generateOrderConfirmationText(orderDetails) {
-  const { reference, customer, items, amount, createdAt } = orderDetails;
-  
+  const { reference, customer = {}, items = [], amount = 0, createdAt = Date.now() } = orderDetails;
+  const customerName = customer.name || 'valued customer';
   return `
 Order Confirmation - FoodJoint
 
-Hello ${customer.name || 'valued customer'},
+Hello ${customerName},
 
 Thank you for your order! Your payment has been processed successfully.
 
@@ -352,43 +305,12 @@ FoodJoint - Delicious meals delivered fresh!
   `;
 }
 
-// Alternative implementations for different email services:
+// Alternative implementations for different email services (kept as examples)
 
 export async function sendWithSendGrid(orderDetails) {
-  // Example SendGrid implementation
-  // const sgMail = require('@sendgrid/mail');
-  // sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-  
-  // const msg = {
-  //   to: orderDetails.customer.email,
-  //   from: 'orders@foodjoint.com',
-  //   subject: `Order Confirmation - ${orderDetails.reference}`,
-  //   text: generateOrderConfirmationText(orderDetails),
-  //   html: generateOrderConfirmationHTML(orderDetails),
-  // };
-  
-  // return await sgMail.send(msg);
+  // Example SendGrid implementation (commented out)
 }
 
 export async function sendWithNodemailer(orderDetails) {
-  // Example Nodemailer implementation
-  // const nodemailer = require('nodemailer');
-  
-  // const transporter = nodemailer.createTransporter({
-  //   service: 'gmail', // or your SMTP service
-  //   auth: {
-  //     user: process.env.EMAIL_USER,
-  //     pass: process.env.EMAIL_PASS
-  //   }
-  // });
-  
-  // const mailOptions = {
-  //   from: 'orders@foodjoint.com',
-  //   to: orderDetails.customer.email,
-  //   subject: `Order Confirmation - ${orderDetails.reference}`,
-  //   text: generateOrderConfirmationText(orderDetails),
-  //   html: generateOrderConfirmationHTML(orderDetails)
-  // };
-  
-  // return await transporter.sendMail(mailOptions);
+  // Example Nodemailer implementation (commented out)
 }

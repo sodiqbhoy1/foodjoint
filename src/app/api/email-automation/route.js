@@ -6,33 +6,42 @@ import { sendOrderConfirmationEmail } from '@/lib/emailService';
 
 export async function POST(request) {
   try {
-    console.log('🔄 Starting automated email processing...');
+  // Starting automated email processing
     
     // Optional API key protection (can be called without key for internal use)
     const { apiKey } = await request.json().catch(() => ({}));
     
-    const db = await getDb();
-    
-    // Find orders that:
-    // 1. Are paid (successful)
-    // 2. Don't have confirmation email sent
-    // 3. Were created in the last 24 hours (to avoid spam)
-    // 4. Have customer email
+    // Try Order model first
+    let OrderModel = null;
+    try {
+      const { connectMongoose } = await import('@/lib/mongoose');
+      await connectMongoose();
+      OrderModel = (await import('@/models/Order')).default;
+    } catch (e) {
+      // ignore
+    }
+
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    
-    const ordersNeedingEmail = await db.collection('orders').find({
+    const query = {
       paid: true,
       'customer.email': { $exists: true, $ne: '' },
       confirmationEmailSent: { $ne: true },
       createdAt: { $gte: twentyFourHoursAgo },
-      // Avoid orders that have had too many email attempts
       $or: [
         { emailAttempts: { $exists: false } },
         { emailAttempts: { $lt: 3 } }
       ]
-    }).toArray();
+    };
+
+    let ordersNeedingEmail = [];
+    if (OrderModel) {
+      ordersNeedingEmail = await OrderModel.find(query).lean().exec();
+    } else {
+      const db = await getDb();
+      ordersNeedingEmail = await db.collection('orders').find(query).toArray();
+    }
     
-    console.log(`📧 Found ${ordersNeedingEmail.length} orders needing confirmation emails`);
+  // Found orders needing confirmation emails: ${ordersNeedingEmail.length}
     
     if (ordersNeedingEmail.length === 0) {
       return Response.json({
@@ -49,36 +58,46 @@ export async function POST(request) {
     // Process each order
     for (const order of ordersNeedingEmail) {
       try {
-        console.log(`📧 Processing email for order: ${order.reference}`);
+  // Processing email for order
         
         // Increment attempt counter
         const currentAttempts = (order.emailAttempts || 0) + 1;
-        await db.collection('orders').updateOne(
-          { _id: order._id },
-          { 
-            $set: { 
-              emailAttempts: currentAttempts,
-              lastEmailAttempt: new Date()
+        if (OrderModel) {
+          await OrderModel.updateOne({ _id: order._id }, { $set: { emailAttempts: currentAttempts, lastEmailAttempt: new Date() } });
+        } else {
+          const db = await getDb();
+          await db.collection('orders').updateOne(
+            { _id: order._id },
+            { 
+              $set: { 
+                emailAttempts: currentAttempts,
+                lastEmailAttempt: new Date()
+              }
             }
-          }
-        );
+          );
+        }
         
         // Try to send email
         const emailResult = await sendOrderConfirmationEmail(order);
         
         if (emailResult.success) {
           // Mark as sent
-          await db.collection('orders').updateOne(
-            { _id: order._id },
-            { 
-              $set: { 
-                confirmationEmailSent: true,
-                confirmationEmailSentAt: new Date(),
-                emailAttempts: currentAttempts
-              },
-              $unset: { confirmationEmailError: "" }
-            }
-          );
+          if (OrderModel) {
+            await OrderModel.updateOne({ _id: order._id }, { $set: { confirmationEmailSent: true, confirmationEmailSentAt: new Date(), emailAttempts: currentAttempts }, $unset: { confirmationEmailError: "" } });
+          } else {
+            const db = await getDb();
+            await db.collection('orders').updateOne(
+              { _id: order._id },
+              { 
+                $set: { 
+                  confirmationEmailSent: true,
+                  confirmationEmailSentAt: new Date(),
+                  emailAttempts: currentAttempts
+                },
+                $unset: { confirmationEmailError: "" }
+              }
+            );
+          }
           
           successCount++;
           results.push({
@@ -87,19 +106,24 @@ export async function POST(request) {
             email: order.customer.email
           });
           
-          console.log(`✅ Email sent successfully for order: ${order.reference}`);
+          // Email sent successfully for order
         } else {
           // Mark the error but don't fail completely
-          await db.collection('orders').updateOne(
-            { _id: order._id },
-            { 
-              $set: { 
-                confirmationEmailError: emailResult.error || 'Unknown error',
-                lastEmailAttempt: new Date(),
-                emailAttempts: currentAttempts
+          if (OrderModel) {
+            await OrderModel.updateOne({ _id: order._id }, { $set: { confirmationEmailError: emailResult.error || 'Unknown error', lastEmailAttempt: new Date(), emailAttempts: currentAttempts } });
+          } else {
+            const db = await getDb();
+            await db.collection('orders').updateOne(
+              { _id: order._id },
+              { 
+                $set: { 
+                  confirmationEmailError: emailResult.error || 'Unknown error',
+                  lastEmailAttempt: new Date(),
+                  emailAttempts: currentAttempts
+                }
               }
-            }
-          );
+            );
+          }
           
           failureCount++;
           results.push({
@@ -109,7 +133,7 @@ export async function POST(request) {
             email: order.customer.email
           });
           
-          console.log(`❌ Email failed for order: ${order.reference} - ${emailResult.error}`);
+          // Email failed for order
         }
         
         // Small delay to avoid overwhelming email service
@@ -127,7 +151,7 @@ export async function POST(request) {
       }
     }
     
-    console.log(`🎯 Email processing complete: ${successCount} success, ${failureCount} failures`);
+  // Email processing complete: ${successCount} success, ${failureCount} failures
     
     return Response.json({
       success: true,
@@ -154,21 +178,16 @@ export async function POST(request) {
 // GET endpoint for health check and manual trigger
 export async function GET() {
   try {
-    const db = await getDb();
-    
-    // Get count of orders needing emails
-    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    
-    const pendingCount = await db.collection('orders').countDocuments({
-      paid: true,
-      'customer.email': { $exists: true, $ne: '' },
-      confirmationEmailSent: { $ne: true },
-      createdAt: { $gte: twentyFourHoursAgo },
-      $or: [
-        { emailAttempts: { $exists: false } },
-        { emailAttempts: { $lt: 3 } }
-      ]
-    });
+    // GET: check pending count
+    // Try model count first
+    let pendingCount = 0;
+    try {
+      const OrderModel2 = (await import('@/models/Order')).default;
+      pendingCount = await OrderModel2.countDocuments({ paid: true, 'customer.email': { $exists: true, $ne: '' }, confirmationEmailSent: { $ne: true }, createdAt: { $gte: twentyFourHoursAgo }, $or: [ { emailAttempts: { $exists: false } }, { emailAttempts: { $lt: 3 } } ] }).exec();
+    } catch (e) {
+      const db = await getDb();
+      pendingCount = await db.collection('orders').countDocuments({ paid: true, 'customer.email': { $exists: true, $ne: '' }, confirmationEmailSent: { $ne: true }, createdAt: { $gte: twentyFourHoursAgo }, $or: [ { emailAttempts: { $exists: false } }, { emailAttempts: { $lt: 3 } } ] });
+    }
     
     return Response.json({
       success: true,

@@ -21,9 +21,9 @@ export async function POST(req) {
         console.error('Invalid webhook signature');
         return NextResponse.json({ ok: false, error: 'Invalid signature' }, { status: 401 });
       }
-      console.log('Webhook signature verified ✅');
+  // Webhook signature verified
     } else {
-      console.warn('⚠️  Webhook running without signature verification. Add PAYSTACK_WEBHOOK_SECRET for security.');
+    console.warn('Webhook running without signature verification. Add PAYSTACK_WEBHOOK_SECRET for security.');
     }
     
     // Log webhook details for debugging
@@ -32,12 +32,21 @@ export async function POST(req) {
     
     if (body.event === 'charge.success' && body.data.status === 'success') {
       const meta = body.data.metadata || {};
+      // Try Mongoose Order model first
+      let OrderModel = null;
+      try {
+        const { connectMongoose } = await import('@/lib/mongoose');
+        await connectMongoose();
+        OrderModel = (await import('@/models/Order')).default;
+      } catch (e) {
+        // ignore
+      }
+
       const db = await getDb();
-      
       // Check if order already exists (avoid duplicates)
-      const existingOrder = await db.collection('orders').findOne({ 
-        reference: body.data.reference 
-      });
+      const existingOrder = OrderModel
+        ? await OrderModel.findOne({ reference: body.data.reference }).lean().exec()
+        : await db.collection('orders').findOne({ reference: body.data.reference });
       
       if (existingOrder) {
         console.log('Order already exists:', body.data.reference);
@@ -59,23 +68,32 @@ export async function POST(req) {
         paystack_transaction_id: body.data.id
       };
       
-      const result = await db.collection('orders').insertOne(order);
-      order._id = result.insertedId;
+      if (OrderModel) {
+        const created = await OrderModel.create(order);
+        order._id = created._id;
+      } else {
+        const result = await db.collection('orders').insertOne(order);
+        order._id = result.insertedId;
+      }
       
       // Send order confirmation email (non-blocking) and mark flag
       if (order.customer?.email) {
-        console.log('📧 Attempting to send webhook order confirmation email to:', order.customer.email);
+  // Attempting to send webhook order confirmation email to customer
         sendOrderConfirmationEmail(order)
           .then(async (result) => {
-            console.log('📧 Webhook email result:', result);
+            // Webhook email result
             if (result?.success) {
-              await db.collection('orders').updateOne(
-                { _id: order._id },
-                { $set: { confirmationEmailSent: true, confirmationEmailSentAt: new Date() } }
-              );
-              console.log('✅ Webhook email flag updated for order:', order.reference);
+              if (OrderModel) {
+                await OrderModel.updateOne({ _id: order._id }, { $set: { confirmationEmailSent: true, confirmationEmailSentAt: new Date() } });
+              } else {
+                await db.collection('orders').updateOne(
+                  { _id: order._id },
+                  { $set: { confirmationEmailSent: true, confirmationEmailSentAt: new Date() } }
+                );
+              }
+              // Webhook email flag updated for order
             } else {
-              console.log('❌ Webhook email failed but order saved:', result);
+              // Webhook email failed but order saved
               await db.collection('orders').updateOne(
                 { _id: order._id },
                 { $set: { confirmationEmailError: result?.error || 'Unknown error', confirmationEmailSentAt: new Date() } }
@@ -91,17 +109,17 @@ export async function POST(req) {
             ).catch(dbErr => console.error('Failed to update email error:', dbErr));
           });
       } else {
-        console.log('⚠️ No customer email found in webhook order, skipping email');
+  // No customer email found in webhook order, skipping email
       }
       
-      console.log('✅ Order created via webhook:', order.reference);
+  // Order created via webhook
       return NextResponse.json({ ok: true, order });
     }
     
-    console.log('ℹ️  Webhook event ignored:', body.event);
+  // Webhook event ignored
     return NextResponse.json({ ok: false, message: 'Not a successful payment event.' });
   } catch (e) {
-    console.error('❌ Webhook error:', e);
+  console.error('Webhook error:', e);
     return NextResponse.json({ ok: false, error: e.message }, { status: 500 });
   }
 }

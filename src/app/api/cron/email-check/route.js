@@ -9,10 +9,10 @@ export async function GET(request) {
     
     if (authHeader !== `Bearer ${cronSecret}`) {
       // Still allow it to run if no secret is set (for manual testing)
-      console.log('⚠️ Cron job running without proper authentication');
+  console.warn('Cron job running without proper authentication');
     }
     
-    console.log('⏰ Cron job triggered: Checking for pending order emails...');
+  // Cron job triggered: Checking for pending order emails
     
     // Call the email automation endpoint
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.VERCEL_URL || 'http://localhost:3000';
@@ -30,7 +30,7 @@ export async function GET(request) {
     
     const result = await response.json();
     
-    console.log('⏰ Cron job completed:', result);
+  // Cron job completed
     
     return Response.json({
       success: true,
