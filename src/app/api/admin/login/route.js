@@ -24,11 +24,14 @@ export async function POST(req) {
       return NextResponse.json({ message: 'Email and password are required' }, { status: 400 });
     }
 
+    // Normalize email to lowercase (match signup behavior)
+    const emailLower = email.toLowerCase();
+
     // Try Mongoose model first
     const Admin = await tryLoadAdminModel();
     let admin = null;
     if (Admin) {
-      admin = await Admin.findOne({ email }).lean().exec();
+      admin = await Admin.findOne({ email: emailLower }).lean().exec();
       if (!admin) {
         return NextResponse.json({ message: 'Invalid email or password' }, { status: 401 });
       }
@@ -39,8 +42,9 @@ export async function POST(req) {
         return NextResponse.json({ message: 'Invalid email or password' }, { status: 401 });
       }
     } else {
-      const db = await getDb();
-      admin = await db.collection('admins').findOne({ email });
+      // Use same database name as signup route
+      const db = await getDb(process.env.MONGODB_DB || 'platepay');
+      admin = await db.collection('admins').findOne({ email: emailLower });
       if (!admin) {
         return NextResponse.json({ message: 'Invalid email or password' }, { status: 401 });
       }

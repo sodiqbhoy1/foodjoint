@@ -11,11 +11,6 @@ export default function Menu(){
     const [loading, setLoading] = useState(true)
     const { add } = useCart();
 
-    // NOTE: The menu data structure is assumed to be a flat array for this component.
-    // In a real-world scenario like the image, the menu would be grouped by category (e.g., 'COMBO DEALS').
-    // Since your current data structure is a flat `menu` array, I'll group the displayed items under a single 'COMBO DEALS' heading
-    // to match the screenshot's visual appearance.
-
     useEffect(()=>{
         fetchMenu()
     },[])
@@ -50,9 +45,6 @@ export default function Menu(){
         }
 
     }
-
-    
-
     const [quantities, setQuantities] = useState({})
 
     const formatPrice = (p) => {
@@ -84,153 +76,152 @@ export default function Menu(){
 
     return (
 
-        <>
-        <Navbar/>
+<>
+  <Navbar />
 
-                {/* Full-page loader overlay (kept as is) */}
-                {loading && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-                        <div role="status" className="p-6 bg-white/90 rounded-lg flex flex-col items-center gap-4">
-                            <svg className="w-12 h-12 text-[var(--brand)] animate-spin" viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
-                                <circle cx="25" cy="25" r="20" stroke="currentColor" strokeWidth="5" strokeOpacity="0.2" />
-                                <path d="M45 25a20 20 0 00-20-20" stroke="currentColor" strokeWidth="5" strokeLinecap="round" />
-                            </svg>
-                            <span className="text-sm text-[var(--foreground)]">Loading menu…</span>
-                        </div>
+  {/* Full-page loader overlay (unchanged) */}
+  {loading && (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+      <div role="status" className="p-6 bg-white/90 rounded-lg flex flex-col items-center gap-4">
+        <svg
+          className="w-12 h-12 text-[var(--brand)] animate-spin"
+          viewBox="0 0 50 50"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          aria-hidden
+        >
+          <circle cx="25" cy="25" r="20" stroke="currentColor" strokeWidth="5" strokeOpacity="0.2" />
+          <path d="M45 25a20 20 0 00-20-20" stroke="currentColor" strokeWidth="5" strokeLinecap="round" />
+        </svg>
+        <span className="text-sm text-[var(--foreground)]">Loading menu…</span>
+      </div>
+    </div>
+  )}
+
+  {/* Main section with simpler card layout */}
+  <main className="max-w-4xl mx-auto px-3 sm:px-4 py-6">
+    {menu?.length === 0 ? (
+      <p className="text-gray-600 text-center">No menu items found.</p>
+    ) : (
+      <section>
+        {/* Simple heading */}
+        <h2 className="text-2xl font-bold text-gray-800 mb-6">
+          Our Menu
+        </h2>
+
+        {/* Single column layout for horizontal cards */}
+        <div className="flex flex-col gap-4">
+          {menu.map((item) => {
+            const key = item._id ?? item.id ?? item.name ?? item.title;
+            const title = item.name ?? item.title ?? "Untitled";
+            const description = item.description ?? item.desc ?? "Delicious food item";
+            const price = formatPrice(item.price ?? item.cost);
+            const img = item.image ?? item.imageUrl ?? item.img ?? null;
+            const qty = quantities[key] ?? 1;
+            const inStock = item.status !== "unavailable";
+
+            const addToCart = () => {
+              if (add && inStock) {
+                add(
+                  {
+                    key,
+                    title,
+                    price: item.price ?? item.cost ?? 0,
+                    image: img,
+                  },
+                  qty
+                );
+              }
+            };
+
+            return (
+              <article
+                key={key}
+                className="bg-white border border-gray-200 rounded-lg overflow-hidden flex flex-row"
+              >
+                {/* Image section on the left - fixed width */}
+                <div className="relative w-32 sm:w-40 h-32 sm:h-36 flex-shrink-0">
+                  {img ? (
+                    <Image
+                      src={img}
+                      alt={title}
+                      fill
+                      className="object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gray-50 flex items-center justify-center text-xs text-gray-400">
+                      No Image
                     </div>
-                )}
+                  )}
+                  {!inStock && (
+                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                      <span className="text-white text-xs font-medium">Out of Stock</span>
+                    </div>
+                  )}
+                </div>
 
-                {/* Changed max-width and margins to match the left-aligned look of the screenshot */}
-                <main className="max-w-4xl mx-auto md:ml-20 px-3 sm:px-4 py-6 sm:py-8">
-                        {/* We will hide the generic "Our Menu" heading to use the custom 'COMBO DEALS' heading */}
-                        {/* <h2 className="text-2xl font-bold mb-4 text-[var(--foreground)]">Our Menu</h2> */}
+                {/* Content section on the right - flexible */}
+                <div className="flex-1 p-3 flex flex-col justify-between">
+                  <div>
+                    {/* Title */}
+                    <h3 className="text-base font-semibold text-gray-900 mb-1">{title}</h3>
 
-                        {menu?.length === 0 ? (
-                                <p className="text-[var(--foreground)]">No menu items found.</p>
-                        ) : (
-                            <section className="flex flex-col gap-4">
-                                {/* CUSTOM HEADING for 'COMBO DEALS' to match the screenshot's style */}
-                                <h2 className="text-2xl md:text-3xl font-bold mb-4 text-[var(--brand-dark)] border-b-4 border-[var(--brand)] inline-block">COMBO DEALS</h2>
+                    {/* Description */}
+                    <p className="text-xs text-gray-600 mb-2 line-clamp-2">{description}</p>
+                  </div>
 
-                                <div className="flex flex-col gap-4">
-                                    {menu.map((item) => {
-                                        // Use _id from MongoDB or fallback
-                                        const key = item._id ?? item.id ?? item.name ?? item.title
-                                        const title = item.name ?? item.title ?? 'Untitled'
-                                        // Use actual description from the item
-                                        const description = item.description ?? item.desc ?? 'Delicious food item'
-                                        const price = formatPrice(item.price ?? item.cost)
-                                        const img = item.image ?? item.imageUrl ?? item.img ?? null
-                                        const qty = quantities[key] ?? 1
-                                        // Check if item is available based on status
-                                        const inStock = item.status !== 'unavailable';
+                  {/* Price and controls at bottom */}
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-lg font-bold text-red-600">{price}</span>
 
-                                        const addToCart = () => {
-                                            if (add && inStock) {
-                                                add({ 
-                                                    key, 
-                                                    title, 
-                                                    price: item.price ?? item.cost ?? 0,
-                                                    image: img
-                                                }, qty);
-                                            }
-                                        }
+                    {inStock && (
+                      <div className="flex items-center gap-2">
+                        {/* Quantity Control - compact */}
+                        <div
+                          className="flex items-center border border-gray-300 rounded"
+                          role="group"
+                          aria-label={`Quantity controls for ${title}`}
+                        >
+                          <button
+                            onClick={() => changeQty(key, -1)}
+                            className="px-2 py-1 text-gray-600 hover:bg-gray-100 disabled:opacity-50"
+                            disabled={qty <= 1}
+                          >
+                            <FiMinus size={14} />
+                          </button>
+                          <span className="px-3 py-1 text-sm font-medium text-gray-900 border-x border-gray-300">
+                            {qty}
+                          </span>
+                          <button
+                            onClick={() => changeQty(key, 1)}
+                            className="px-2 py-1 text-gray-600 hover:bg-gray-100"
+                          >
+                            <FiPlus size={14} />
+                          </button>
+                        </div>
 
-                                        return (
-                                            // Responsive layout: image on the left on small screens, horizontal on larger screens
-                                            <article key={key} className="w-full flex flex-row items-start py-4 border-b border-gray-200 gap-4" style={{ color: 'var(--foreground)' }}>
-                                                
-                                                {/* 1. Image - responsive sizing */}
-                                                <div className="w-[90px] h-[90px] sm:w-[150px] sm:h-[100px] flex-shrink-0 overflow-hidden rounded-md">
-                                                    {img ? (
-                                                        <Image 
-                                                            src={img} 
-                                                            alt={title} 
-                                                            width={150} 
-                                                            height={100} 
-                                                            className="w-full h-full object-cover" 
-                                                        />
-                                                    ) : (
-                                                        <div className="w-full h-full bg-gray-100 flex items-center justify-center text-xs text-gray-500">No Image</div>
-                                                    )}
-                                                </div>
+                        {/* Add to Cart Button - icon only on mobile, text on larger screens */}
+                        <button
+                          onClick={addToCart}
+                          aria-label={`Add ${title} to cart`}
+                          className="bg-red-600 text-white px-2 py-2 sm:px-3 rounded hover:bg-red-700 flex items-center gap-1"
+                        >
+                          <FiShoppingCart size={16} />
+                          <span className="hidden sm:inline text-sm">Add</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      </section>
+    )}
+  </main>
 
-                                                {/* 2. Content section - title, description, and controls */}
-                                                <div className="flex-1 flex flex-col gap-3">
-                                                    {/* Title and Description */}
-                                                    <div>
-                                                        <h3 className="text-lg md:text-xl font-bold text-black mb-2">{title}</h3>
-                                                        <p className="text-sm md:text-base text-gray-600 leading-relaxed">{description}</p>
-                                                    </div>
-                                                    
-                                                    {/* Controls section - responsive layout */}
-                                                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
-                                                        {/* Left side: Quantity and Add button */}
-                                                            <div className="flex items-center gap-3">
-                                                            {/* Quantity Control (only visible if in stock) */}
-                                                            {inStock && (
-                                                                <div className="inline-flex items-center border border-gray-300 rounded-md overflow-hidden bg-white" role="group" aria-label={`Quantity controls for ${title}`}>
-                                                                    {/* Minus Button - larger touch target */}
-                                                                    <button 
-                                                                        onClick={() => changeQty(key, -1)} 
-                                                                        className="px-3 py-2 text-gray-600 hover:bg-gray-100 transition-colors disabled:opacity-50 min-w-[40px]" 
-                                                                        style={{ cursor: 'pointer' }} 
-                                                                        disabled={qty <= 1}
-                                                                    >
-                                                                        <FiMinus size={16} />
-                                                                    </button>
-                                                                    {/* Quantity Display - larger for better readability */}
-                                                                    <div className="px-4 py-2 text-center font-medium text-black border-l border-r border-gray-300 min-w-[50px]">
-                                                                        {qty}
-                                                                    </div>
-                                                                    {/* Plus Button - larger touch target */}
-                                                                    <button 
-                                                                        onClick={() => changeQty(key, 1)} 
-                                                                        className="px-3 py-2 text-gray-600 hover:bg-gray-100 transition-colors min-w-[40px]" 
-                                                                        style={{ cursor: 'pointer' }}
-                                                                    >
-                                                                        <FiPlus size={16} />
-                                                                    </button>
-                                                                </div>
-                                                            )}
-                                                            
-                                                            {/* Add to Cart button - larger and more prominent */}
-                                                            {inStock ? (
-                                                                <button
-                                                                    onClick={addToCart}
-                                                                    aria-label={`Add ${title} to cart`}
-                                                                    className="inline-flex items-center gap-2 bg-red-600 text-white px-3 py-2 md:px-6 md:py-3 font-semibold hover:bg-red-700 transition-colors rounded-md text-sm md:text-base"
-                                                                >
-                                                                    {/* Show compact '+' on small screens, label on md+ */}
-                                                                    <FiPlus size={16} className="sm:hidden" />
-                                                                    <span className="hidden sm:inline-flex items-center gap-2">
-                                                                        <FiShoppingCart size={16} />
-                                                                        Add to Cart
-                                                                    </span>
-                                                                </button>
-                                                            ) : (
-                                                                <span className="bg-gray-400 text-white px-6 py-2 md:px-8 md:py-3 font-semibold rounded-md text-sm md:text-base">
-                                                                    Out of Stock
-                                                                </span>
-                                                            )}
-                                                        </div>
-
-                                                        {/* Right side: Price - more prominent */}
-                                                        <div className="flex justify-start sm:justify-end">
-                                                            <span className="text-xl md:text-2xl font-bold text-red-600">{price}</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </article>
-                                        )
-                                    })}
-                                </div>
-                            </section>
-                        )}
-                </main>
-
-        <CartPanel />
-
-        </>
+  <CartPanel />
+</>
     )
 }

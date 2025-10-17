@@ -7,7 +7,7 @@ export default function Navbar() {
     const [open, setOpen] = useState(false);
 
     return (
-        <header style={{ backgroundColor: 'var(--brand)', color: 'var(--background)' }}>
+        <header className="sticky top-0 z-40 shadow-md" style={{ backgroundColor: 'var(--brand)', color: 'var(--background)' }}>
             <nav className="max-w-6xl mx-auto flex items-center justify-between py-4 px-6">
                 {/* Logo on the left with home link */}
                 <Link href="/" className="flex items-center gap-3 hover:opacity-90 transition-all duration-300 group no-underline">
