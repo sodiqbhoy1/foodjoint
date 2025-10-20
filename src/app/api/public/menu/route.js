@@ -8,7 +8,7 @@ async function tryLoadMenuModel() {
     const Menu = (await import('@/models/Menu')).default;
     return Menu;
   } catch (e) {
-    console.log('⚠️ Mongoose Menu model not available:', e?.message || e);
+    console.log(' Mongoose Menu model not available:', e?.message || e);
     return null;
   }
 }
