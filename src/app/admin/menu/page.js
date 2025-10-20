@@ -43,12 +43,15 @@ export default function AdminMenuPage(){
       const data = await res.json();
       
       if (data.ok) {
+        console.log('✅ Image uploaded successfully:', data.url);
         setForm(f => ({ ...f, image: data.url, imageUploading: false }));
       } else {
+        console.error('❌ Failed to upload image. Server response:', data);
         alert('Failed to upload image: ' + (data.error || 'Unknown error'));
         setForm(f => ({ ...f, imageUploading: false }));
       }
     } catch (error) {
+      console.error('❌ Exception during image upload:', error);
       alert('Failed to upload image: ' + error.message);
       setForm(f => ({ ...f, imageUploading: false }));
     }
