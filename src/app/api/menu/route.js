@@ -21,7 +21,7 @@ export async function GET() {
       const items = await Menu.find({}).lean().exec();
       return NextResponse.json({ ok: true, items });
     }
-    const db = await getDb();
+    const db = await getDb(process.env.MONGODB_DB || 'platepay');
     const items = await db.collection('menu').find({}).toArray();
     return NextResponse.json({ ok: true, items });
   } catch (err) {
@@ -46,7 +46,8 @@ export async function POST(req) {
       price: body.price,
       category: body.category || 'general',
       image: body.image || null,
-      description: body.description || ''
+      description: body.description || '',
+      status: body.status || 'available'
     };
 
     const Menu = await tryLoadMenuModel();
@@ -55,7 +56,7 @@ export async function POST(req) {
       return NextResponse.json({ ok: true, item: created });
     }
 
-    const db = await getDb();
+    const db = await getDb(process.env.MONGODB_DB || 'platepay');
     const result = await db.collection('menu').insertOne(itemData);
     itemData._id = result.insertedId;
     return NextResponse.json({ ok: true, item: itemData });
@@ -86,7 +87,7 @@ export async function PUT(req) {
       return NextResponse.json({ ok: true, item });
     }
 
-    const db = await getDb();
+    const db = await getDb(process.env.MONGODB_DB || 'platepay');
     await db.collection('menu').updateOne({ _id: new ObjectId(id) }, { $set: update });
     const item = await db.collection('menu').findOne({ _id: new ObjectId(id) });
     return NextResponse.json({ ok: true, item });
@@ -113,7 +114,7 @@ export async function DELETE(req) {
       return NextResponse.json({ ok: true });
     }
 
-    const db = await getDb();
+    const db = await getDb(process.env.MONGODB_DB || 'platepay');
     await db.collection('menu').deleteOne({ _id: new ObjectId(id) });
     return NextResponse.json({ ok: true });
   } catch (err) {

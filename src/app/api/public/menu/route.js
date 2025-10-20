@@ -28,7 +28,7 @@ export async function GET(req) {
     }
 
     // Fallback to native driver
-    const db = await getDb();
+    const db = await getDb(process.env.MONGODB_DB || 'platepay');
     let query = {};
     if (category) {
       query.category = { $regex: new RegExp(`^${category}$`, 'i') };

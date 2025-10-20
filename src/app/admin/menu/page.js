@@ -55,18 +55,47 @@ export default function AdminMenuPage(){
   };
 
   const save = async () => {
+    // Validate required fields
+    if (!form.name || !form.name.trim()) {
+      alert('Please enter a menu item name');
+      return;
+    }
+    if (!form.price || isNaN(form.price) || parseFloat(form.price) <= 0) {
+      alert('Please enter a valid price');
+      return;
+    }
+    if (!form.category || !form.category.trim()) {
+      alert('Please select a category');
+      return;
+    }
+
     setLoading(true);
-    const method = form.id ? 'PUT' : 'POST';
-    const payload = { ...form };
-    if (form.id) payload._id = form.id;
-    const res = await fetch('/api/menu', { 
-      method, 
-      headers: getAuthHeaders(), 
-      body: JSON.stringify(payload) 
-    });
-    const data = await res.json();
-    setLoading(false);
-    if (data.ok) { setForm({ id: '', name: '', price: '', category: '', description: '', image: '', status: 'available' }); load(); }
+    try {
+      const method = form.id ? 'PUT' : 'POST';
+      const payload = { ...form };
+      if (form.id) payload._id = form.id;
+      
+      const res = await fetch('/api/menu', { 
+        method, 
+        headers: getAuthHeaders(), 
+        body: JSON.stringify(payload) 
+      });
+      
+      const data = await res.json();
+      
+      if (data.ok) { 
+        setForm({ id: '', name: '', price: '', category: '', description: '', image: '', status: 'available' }); 
+        load();
+        alert(form.id ? 'Menu item updated successfully!' : 'Menu item created successfully!');
+      } else {
+        alert('Failed to save: ' + (data.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Save error:', error);
+      alert('Failed to save menu item: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const edit = (it) => setForm({

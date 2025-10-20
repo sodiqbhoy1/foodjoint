@@ -1,7 +1,13 @@
 import { NextResponse } from 'next/server';
-import fs from 'fs';
-import path from 'path';
 import { verifyAdminToken } from '@/lib/auth';
+import { v2 as cloudinary } from 'cloudinary';
+
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 export async function POST(req) {
   try {
@@ -27,35 +33,47 @@ export async function POST(req) {
       }, { status: 400 });
     }
 
-    // Validate file size (5MB limit)
-    const maxSize = 5 * 1024 * 1024; // 5MB
+    // Validate file size (10MB limit for Cloudinary)
+    const maxSize = 10 * 1024 * 1024; // 10MB
     if (file.size > maxSize) {
       return NextResponse.json({ 
         ok: false, 
-        error: 'File too large. Maximum size is 5MB.' 
+        error: 'File too large. Maximum size is 10MB.' 
       }, { status: 400 });
     }
 
+    // Convert file to buffer
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-    const ext = (file.name || 'upload').split('.').pop().toLowerCase();
-    const filename = `menu_${Date.now()}.${ext}`;
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads');
-    
-    // Ensure upload directory exists
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    
-    const filepath = path.join(uploadDir, filename);
-    fs.writeFileSync(filepath, buffer);
-    const url = `/uploads/${filename}`;
 
-  // Image uploaded successfully
+    // Upload to Cloudinary using upload_stream
+    const uploadResult = await new Promise((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          folder: 'foodjoint/menu', // Organize images in a folder
+          resource_type: 'image',
+          transformation: [
+            { width: 800, height: 600, crop: 'limit' }, // Resize large images
+            { quality: 'auto:good' }, // Optimize quality
+            { fetch_format: 'auto' }, // Automatic format selection (WebP when supported)
+          ],
+        },
+        (error, result) => {
+          if (error) reject(error);
+          else resolve(result);
+        }
+      );
+      
+      uploadStream.end(buffer);
+    });
+
+    // Return the Cloudinary URL
+    const url = uploadResult.secure_url;
+
     return NextResponse.json({ ok: true, url });
     
   } catch (error) {
-  console.error('Upload error:', error);
+    console.error('Upload error:', error);
     return NextResponse.json({ 
       ok: false, 
       error: 'Failed to upload file: ' + error.message 
